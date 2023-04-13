@@ -3,7 +3,6 @@ import json
 import sys
 import argparse
 
-
 ignore_types = ['Float', 'Int', 'String', 'Boolean', '__Schema', '__Type', '__TypeKind', '__Field', '__InputValue', '__EnumValue', '__Directive', '__DirectiveLocation']
 ignore_kind = ['SCALAR']
 introspection_query = { "query": "{__schema{queryType{name}mutationType{name}subscriptionType{name}types{...FullType}directives{name description locations args{...InputValue}}}}fragment FullType on __Type{kind name description fields(includeDeprecated:true){name description args{...InputValue}type{...TypeRef}isDeprecated deprecationReason}inputFields{...InputValue}interfaces{...TypeRef}enumValues(includeDeprecated:true){name description isDeprecated deprecationReason}possibleTypes{...TypeRef}}fragment InputValue on __InputValue{name description type{...TypeRef}defaultValue}fragment TypeRef on __Type{kind name ofType{kind name ofType{kind name ofType{kind name ofType{kind name ofType{kind name ofType{kind name ofType{kind name}}}}}}}}"}
@@ -15,7 +14,7 @@ def graphql_introspection_print_output(filter):
         filter = ['enum', 'query', 'mutation', 'union', 'object']
 
     if 'enum' in filter:
-        print("\n--- Enums ---\n")
+        print("\n--- Enums ---")
         for i in final_output['Enum']:
             print(f"\n{i['name']}: {{")
             for j in i['values']:
@@ -23,7 +22,7 @@ def graphql_introspection_print_output(filter):
             print("}")
     
     if 'union' in filter:
-        print("\n--- Unions ---\n")
+        print("\n--- Unions ---")
         for i in final_output['Union']:
             print(f"\n{i['name']}: {{")
             for j in i['values']:
@@ -31,7 +30,7 @@ def graphql_introspection_print_output(filter):
             print("}")
 
     if 'object' in filter:
-        print("\n--- Objects ---\n")
+        print("\n--- Objects ---")
         for i in final_output['Object']:
             print(f"\n{i['name']}: {{")
             for j in i['fields']:
@@ -97,7 +96,7 @@ def graphql_introspection_parse_object(json_object):
                 'fields':[{'name':j['name'],'type':get_object_type(j['type'])} for j in i['fields']]
             })
 
-def graphql_introspection_url(url, filter, save_file, headers={}, cookies={}):
+def graphql_introspection_url(url, filter=None, save_file=None, headers={}, cookies={}):
     result = requests.post(url, json=introspection_query, headers=headers, cookies=cookies)
     json_result  = json.loads(result.text)['data']['__schema']
     if save_file != None:
@@ -107,7 +106,7 @@ def graphql_introspection_url(url, filter, save_file, headers={}, cookies={}):
     graphql_introspection_parse_object(json_result)
     graphql_introspection_print_output(filter)
 
-def graphql_introspection_file(file, filter):
+def graphql_introspection_file(file, filter=None):
     fd = open(file, 'r')
     if not fd:
         sys.exit(1)
@@ -123,15 +122,31 @@ def graphql_args_parser():
     parser.add_argument('-u', '--url')
     parser.add_argument('-f', '--file')
     parser.add_argument('-s', '--save', help='save introspection query in a file to avoid multiple request (only with -u)')
+    parser.add_argument('-H', '--header', nargs='*', help='"header_name: header_value", Add custom header to the request (only with -u)')
+    parser.add_argument('-C', '--cookie', nargs='*', help='"cookie_name: cookie_value", Add custom cookie to the request (only with -u)')
     parser.add_argument('--filter', nargs='*', help='enum, union, object, query, union')
-
     args = parser.parse_args()
+
+    raw_headers = args.header
+    args.header = {}
+    if raw_headers != None:
+        for i in raw_headers:
+            splitted_header = i.split(':')
+            args.header[splitted_header[0].strip()] = splitted_header[1].strip()
+
+    raw_cookies = args.cookie
+    args.cookie = {}
+    if raw_cookies != None:
+        for i in raw_cookies:
+            splitted_cookie = i.split(':')
+            args.header[splitted_cookie[0].strip()] = splitted_cookie[1].strip()
+
     return (args)
 
 if __name__ == "__main__":
     
     args = graphql_args_parser()
-    print(args)
+    #print(args)
 
     if args.save and not args.url:
         print('Bad usage, use --help')
@@ -140,7 +155,7 @@ if __name__ == "__main__":
         if args.file:
             print('Bad usage, use --help')
             sys.exit(1)
-        graphql_introspection_url(args.url, args.filter, args.save, headers={"Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwiaWF0IjoxNjgxMzY5NDM5LCJleHAiOjE2ODEzODAyMzl9.CRUgEMY3UJSU8xL7_QEK0BsiDJDrMctp2lzXd6kayPw"})
+        graphql_introspection_url(args.url, filter=args.filter, save_file=args.save, headers=args.header, cookies=args.cookie)
     elif args.file:
         graphql_introspection_file(args.file, args.filter)
     sys.exit(0)
