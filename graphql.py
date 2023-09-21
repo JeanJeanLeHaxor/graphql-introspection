@@ -95,7 +95,7 @@ def graphql_introspection_parse_object(json_object):
             final_output['Object'].append({
                 'name':i['name'],
                 'type':i['kind'],
-                'fields':[{'name':j['name'],'type':get_object_type(j['type'])} for j in i['fields']]
+                'fields': [{'name':j['name'],'type':get_object_type(j['type'])} for j in i['fields']] if i['fields'] else  []
             })
 
 def graphql_introspection_url(url, filter=None, save_file=None, headers={}, cookies={}):
